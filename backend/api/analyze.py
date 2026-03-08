@@ -34,11 +34,35 @@ async def _analyze_media(
 ) -> Dict[str, Any]:
     """Route media to the appropriate analysis service.
 
+    Priority: Gemini API (free, online) → Local models (BLIP/CLIP/Whisper).
     Returns a media_context dict that gets passed to the LLM.
     """
     media_context: Dict[str, Any] = {}
 
     if content_type == "image":
+        # Try Gemini first
+        try:
+            from services.gemini_analysis_service import (
+                analyze_image_with_gemini,
+                is_gemini_available,
+            )
+            if is_gemini_available():
+                result = await analyze_image_with_gemini(file_bytes)
+                media_context = {
+                    "caption": result.get("caption", ""),
+                    "detected_objects": result.get("detected_objects", []),
+                    "visual_theme": result.get("visual_theme", ""),
+                    "emotional_tone": result.get("emotional_tone", ""),
+                    "meme_probability": result.get("meme_probability", 0),
+                    "visual_quality": result.get("visual_quality", ""),
+                    "composition_notes": result.get("composition_notes", ""),
+                    "improvement_suggestions": result.get("improvement_suggestions", []),
+                }
+                return media_context
+        except Exception as e:
+            logger.warning("Gemini image analysis failed, trying local: %s", e)
+
+        # Fallback to local BLIP/CLIP
         try:
             from services.image_analysis_service import analyze_image
             result = await analyze_image(file_bytes)
@@ -50,9 +74,32 @@ async def _analyze_media(
                 "meme_probability": result.get("meme_probability", 0),
             }
         except Exception as e:
-            logger.warning("Image analysis failed: %s", e)
+            logger.warning("Local image analysis also failed: %s", e)
 
     elif content_type == "video":
+        # Try Gemini + Groq Whisper first
+        try:
+            from services.gemini_analysis_service import (
+                analyze_video_with_gemini,
+                is_gemini_available,
+            )
+            if is_gemini_available():
+                result = await analyze_video_with_gemini(file_bytes, filename)
+                media_context = {
+                    "transcript": result.get("transcript", ""),
+                    "caption": result.get("caption", ""),
+                    "detected_objects": result.get("visual_elements", []),
+                    "emotional_tone": result.get("emotional_tone", ""),
+                    "detected_topics": result.get("detected_topics", []),
+                    "hook_strength": result.get("hook_strength", 0.5),
+                    "pacing_score": result.get("pacing_score", 0.5),
+                    "improvement_suggestions": result.get("improvement_suggestions", []),
+                }
+                return media_context
+        except Exception as e:
+            logger.warning("Gemini video analysis failed, trying local: %s", e)
+
+        # Fallback to local OpenCV + BLIP/CLIP + Whisper
         try:
             from services.video_analysis_service import analyze_video
             result = await analyze_video(file_bytes, filename)
@@ -65,9 +112,32 @@ async def _analyze_media(
                 "pacing_score": result.get("pacing_score", 0.5),
             }
         except Exception as e:
-            logger.warning("Video analysis failed: %s", e)
+            logger.warning("Local video analysis also failed: %s", e)
 
     elif content_type == "audio":
+        # Try Groq Whisper first
+        try:
+            from services.gemini_analysis_service import _transcribe_with_groq_whisper
+            import tempfile, os
+            tmp = tempfile.mktemp(suffix=".wav")
+            with open(tmp, "wb") as f:
+                f.write(file_bytes)
+            transcript = _transcribe_with_groq_whisper(tmp)
+            os.unlink(tmp)
+            if transcript:
+                media_context = {
+                    "transcript": transcript,
+                    "emotional_tone": "",
+                    "detected_topics": [],
+                    "key_phrases": [],
+                    "speech_pace": "moderate",
+                    "engagement_potential": 0.5,
+                }
+                return media_context
+        except Exception as e:
+            logger.warning("Groq Whisper audio failed, trying local: %s", e)
+
+        # Fallback to local Whisper
         try:
             from services.audio_analysis_service import analyze_audio
             result = await analyze_audio(file_bytes, filename)
@@ -80,7 +150,7 @@ async def _analyze_media(
                 "engagement_potential": result.get("engagement_potential", 0.5),
             }
         except Exception as e:
-            logger.warning("Audio analysis failed: %s", e)
+            logger.warning("Local audio analysis also failed: %s", e)
 
     return media_context
 
@@ -194,6 +264,8 @@ async def analyze_content(
             "content_type": content_type,
             "media_url": media_path,
             "media_analysis": media_context,
+            "image_analysis": analysis_result.get("image_analysis"),
+            "video_analysis": analysis_result.get("video_analysis"),
             "score_breakdown": score_breakdown,
             "created_at": analysis_record.get("created_at", ""),
         }
@@ -205,5 +277,9 @@ async def analyze_content(
     except HTTPException:
         raise
     except Exception as e:
+        # Check for rate-limit errors from Gemini/Groq
+        from services.gemini_analysis_service import RateLimitError
+        if isinstance(e, RateLimitError) or "429" in str(e) or "quota" in str(e).lower():
+            raise HTTPException(status_code=429, detail="Too many requests, please try a few minutes later")
         logger.exception("Unhandled error in analyze_content")
         raise HTTPException(status_code=500, detail=f"Analysis error: {str(e)}")

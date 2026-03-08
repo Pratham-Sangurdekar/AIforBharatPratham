@@ -163,37 +163,73 @@ class TrendEngine:
 
     @staticmethod
     def get_trending_by_platform() -> Dict[str, List[Dict[str, Any]]]:
-        """Return platform-specific trends."""
-        return {
-            "twitter": [
-                {"topic": "AI tools taking over", "volume": "125K tweets", "category": "technology"},
-                {"topic": "Election debate reactions", "volume": "89K tweets", "category": "politics"},
-                {"topic": "New meme format", "volume": "67K tweets", "category": "memes"},
-                {"topic": "Productivity morning routines", "volume": "45K tweets", "category": "lifestyle"},
-                {"topic": "Creator economy tips", "volume": "34K tweets", "category": "marketing"},
-            ],
-            "instagram": [
-                {"topic": "Aesthetic reels trending", "volume": "2.1M posts", "category": "entertainment"},
-                {"topic": "AI art showcase", "volume": "890K posts", "category": "technology"},
-                {"topic": "Fitness transformations", "volume": "1.5M posts", "category": "lifestyle"},
-                {"topic": "Brand collaboration trends", "volume": "450K posts", "category": "marketing"},
-                {"topic": "Relatable content creators", "volume": "780K posts", "category": "memes"},
-            ],
-            "youtube": [
-                {"topic": "AI tutorial videos", "volume": "High", "category": "technology"},
-                {"topic": "Documentary style content", "volume": "High", "category": "entertainment"},
-                {"topic": "Short-form vs long-form debate", "volume": "Medium", "category": "marketing"},
-                {"topic": "Political commentary", "volume": "Medium", "category": "politics"},
-                {"topic": "Challenge videos", "volume": "High", "category": "memes"},
-            ],
-            "linkedin": [
-                {"topic": "AI in the workplace", "volume": "Trending", "category": "technology"},
-                {"topic": "Leadership insights", "volume": "Trending", "category": "marketing"},
-                {"topic": "Career transition stories", "volume": "Popular", "category": "lifestyle"},
-                {"topic": "Startup funding news", "volume": "Rising", "category": "technology"},
-                {"topic": "Remote work culture", "volume": "Steady", "category": "lifestyle"},
-            ],
+        """Return platform-specific trends derived from live cached trends."""
+        # Source-to-platform mapping for intelligent routing
+        _SOURCE_PLATFORM_MAP = {
+            "twitter": ["reddit", "google_trends", "google_trends_realtime", "hackernews"],
+            "instagram": ["reddit", "google_trends", "wikipedia", "gdelt"],
+            "youtube": ["google_trends", "google_trends_realtime", "hackernews", "wikipedia"],
+            "linkedin": ["hackernews", "gdelt", "newsapi", "wikipedia"],
         }
+        _PLATFORM_VOLUME_LABELS = {
+            "twitter": ["tweets", "K tweets"],
+            "instagram": ["posts", "K posts"],
+            "youtube": ["searches", "High"],
+            "linkedin": ["mentions", "Trending"],
+        }
+
+        with _lock:
+            trends = _cached_trends.copy()
+
+        if not trends:
+            trends = TrendEngine.get_trending_topics()
+
+        result: Dict[str, List[Dict[str, Any]]] = {}
+
+        for platform, preferred_sources in _SOURCE_PLATFORM_MAP.items():
+            items: List[Dict[str, Any]] = []
+            for category, data in trends.items():
+                if not isinstance(data, dict):
+                    continue
+                topics = data.get("topics", [])
+                for t in topics:
+                    if isinstance(t, dict):
+                        label = t.get("text", str(t))
+                        source = t.get("source", "")
+                    elif isinstance(t, str):
+                        label = t
+                        source = ""
+                    else:
+                        continue
+                    # Prefer topics from sources matching this platform
+                    source_match = any(ps in source.lower() for ps in preferred_sources) if source else True
+                    if source_match and len(items) < 8:
+                        volume_label = _PLATFORM_VOLUME_LABELS[platform][1]
+                        items.append({
+                            "topic": label,
+                            "volume": volume_label,
+                            "category": category,
+                            "source": source,
+                        })
+
+            # Fill to at least 5 items with any remaining trends
+            if len(items) < 5:
+                for category, data in trends.items():
+                    if not isinstance(data, dict):
+                        continue
+                    for t in data.get("topics", []):
+                        label = t if isinstance(t, str) else t.get("text", str(t)) if isinstance(t, dict) else str(t)
+                        existing_topics = {i["topic"] for i in items}
+                        if label not in existing_topics and len(items) < 5:
+                            items.append({
+                                "topic": label,
+                                "volume": _PLATFORM_VOLUME_LABELS[platform][1],
+                                "category": category,
+                            })
+
+            result[platform] = items[:8]
+
+        return result
 
     @staticmethod
     def analyze_trend_alignment(

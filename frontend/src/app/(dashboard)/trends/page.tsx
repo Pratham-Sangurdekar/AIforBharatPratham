@@ -154,7 +154,7 @@ export default function TrendsPage() {
           <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500" />
         </div>
         <span className="text-xs text-[var(--color-text-muted)]">
-          Live — refreshing every 60s from Reddit, Google Trends & GDELT
+          Live — refreshing every 60s from Reddit, Google Trends, GDELT, Hacker News & Wikipedia
         </span>
       </div>
 

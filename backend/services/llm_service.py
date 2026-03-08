@@ -11,6 +11,7 @@ trend_alignment, predicted_metrics, suggestions, and optimized_variants.
 import json
 import logging
 import hashlib
+import os
 from typing import Dict, Any, Optional, List
 
 from config import is_aws, BEDROCK_MODEL_ID, BEDROCK_MAX_TOKENS, AWS_REGION, USE_LLM, USE_LOCAL_LLM
@@ -61,9 +62,19 @@ async def analyze_content_with_llm(
 ) -> Dict[str, Any]:
     """
     Run full content analysis via LLM.
-    Priority: Local Ollama → Bedrock → Heuristic fallback.
+    Priority: Groq API → Local Ollama → Bedrock → Heuristic fallback.
     """
-    # --- Try local LLM first (free, no API key needed) ---
+    # --- Try Groq API first (free, fast, online) ---
+    if os.getenv("GROQ_API_KEY", ""):
+        try:
+            from services.groq_llm_service import analyze_content_with_groq
+            return await analyze_content_with_groq(
+                text, content_type, trending_topics, platform, media_context
+            )
+        except Exception as e:
+            logger.warning("Groq API unavailable, trying fallbacks: %s", e)
+
+    # --- Try local LLM (free, no API key needed) ---
     if USE_LOCAL_LLM:
         try:
             from services.local_llm_service import analyze_content_with_local_llm
@@ -77,7 +88,7 @@ async def analyze_content_with_llm(
     if USE_LLM and (is_aws() or _can_use_bedrock()):
         try:
             return await _analyze_with_bedrock(
-                text, content_type, trending_topics, platform
+                text, content_type, trending_topics, platform, media_context
             )
         except Exception as e:
             logger.warning(
@@ -95,7 +106,17 @@ async def generate_optimized_content(
     platform: str = "general",
 ) -> List[str]:
     """Generate optimised content variants using LLM or heuristics."""
-    # --- Try local LLM first ---
+    # --- Try Groq API first ---
+    if os.getenv("GROQ_API_KEY", ""):
+        try:
+            from services.groq_llm_service import generate_optimized_content_groq
+            return await generate_optimized_content_groq(
+                text, content_dna, suggestions, platform
+            )
+        except Exception as e:
+            logger.warning("Groq variant generation unavailable: %s", e)
+
+    # --- Try local LLM ---
     if USE_LOCAL_LLM:
         try:
             from services.local_llm_service import generate_optimized_content_local
@@ -247,6 +268,7 @@ async def _analyze_with_bedrock(
     content_type: str,
     trending_topics: Optional[Dict[str, Any]],
     platform: str,
+    media_context: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Call Bedrock Claude 3 Haiku for full content analysis."""
     client = _get_bedrock_client()

@@ -29,15 +29,14 @@ export default function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="fixed left-0 top-0 z-40 flex h-screen w-[220px] flex-col border-r border-[var(--color-border)] bg-[var(--color-surface)]">
+    <aside className="fixed left-0 top-0 z-40 flex h-screen w-[220px] flex-col border-r border-[var(--color-border)] bg-black">
       {/* Logo */}
-      <div className="flex h-16 items-center gap-2 px-6 border-b border-[var(--color-border)]">
-        <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] flex items-center justify-center">
-          <TrendingUp className="h-4 w-4 text-white" />
-        </div>
-        <span className="text-lg font-bold tracking-tight">
-          ENG<span className="text-[var(--color-accent)]">AUGE</span>
-        </span>
+      <div className="flex h-16 items-center justify-center px-1 border-b border-[var(--color-border)] overflow-hidden">
+        <img
+          src="/logo-thunder.png"
+          alt="Engauge"
+          className="w-full h-auto object-contain"
+        />
       </div>
 
       {/* Navigation */}

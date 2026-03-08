@@ -4,6 +4,11 @@ AI-powered creator dashboard that predicts content performance.
 Runs locally (uvicorn) or on AWS Lambda (via Mangum adapter).
 """
 
+# Load .env BEFORE any other imports so that config.py and all services
+# can read API keys (GROQ_API_KEY, GEMINI_API_KEY, etc.) via os.getenv().
+from dotenv import load_dotenv
+load_dotenv()
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles

@@ -28,8 +28,12 @@ def get_trends():
 
 @router.get("/trends/platforms")
 def get_platform_trends():
-    """Get platform-specific trending topics."""
-    return database_service.get_platform_trends()
+    """Get platform-specific trending topics (live)."""
+    try:
+        from services.trend_engine import TrendEngine
+        return TrendEngine.get_trending_by_platform()
+    except Exception:
+        return database_service.get_platform_trends()
 
 
 @router.get("/trends/live")

@@ -16,6 +16,9 @@ export async function analyzeContent(formData: FormData) {
     });
     if (!res.ok) {
       const body = await res.json().catch(() => null);
+      if (res.status === 429) {
+        throw new Error("RATE_LIMIT:Too many requests, please try a few minutes later");
+      }
       throw new Error(body?.detail || "Analysis failed");
     }
     return res.json();

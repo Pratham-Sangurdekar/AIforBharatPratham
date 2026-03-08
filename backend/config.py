@@ -54,6 +54,11 @@ USE_LLM = os.getenv("USE_LLM", "false").lower() == "true"  # Use Bedrock LLM vs 
 USE_LOCAL_LLM = os.getenv("USE_LOCAL_LLM", "true").lower() == "true"  # Use Ollama local LLM
 LOCAL_LLM_MODEL = os.getenv("LOCAL_LLM_MODEL", "mistral")
 
+# ---------- Free Online AI APIs ----------
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+
 
 def is_aws() -> bool:
     return ENV == Environment.AWS

@@ -232,6 +232,90 @@ def _fetch_gdelt() -> List[Dict[str, Any]]:
 
 
 # ===========================================================================
+# SOURCE 4: HACKER NEWS (free, no API key)
+# ===========================================================================
+
+def fetch_hackernews_trends() -> List[Dict[str, Any]]:
+    """Fetch top stories from Hacker News Firebase API (free, no auth)."""
+    import urllib.request
+    trends: List[Dict[str, Any]] = []
+
+    try:
+        # Get top story IDs
+        url = "https://hacker-news.firebaseio.com/v0/topstories.json"
+        req = urllib.request.Request(url, headers={"User-Agent": "ENGAUGE/2.0"})
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            story_ids = json.loads(resp.read().decode())
+
+        # Fetch top 15 stories
+        for sid in story_ids[:15]:
+            try:
+                item_url = f"https://hacker-news.firebaseio.com/v0/item/{sid}.json"
+                req = urllib.request.Request(item_url, headers={"User-Agent": "ENGAUGE/2.0"})
+                with urllib.request.urlopen(req, timeout=5) as resp:
+                    item = json.loads(resp.read().decode())
+
+                title = item.get("title", "").strip()
+                score = item.get("score", 0)
+                if not title:
+                    continue
+                pop = min(1.0, score / 500) if score > 0 else 0.1
+                cat = _categorise_keyword(title)
+                trends.append(_make_trend(title, cat, "hackernews", pop))
+            except Exception:
+                continue
+
+    except Exception as e:
+        logger.debug("Hacker News fetch failed: %s", e)
+
+    logger.info("Hacker News: fetched %d trends", len(trends))
+    return trends
+
+
+# ===========================================================================
+# SOURCE 5: WIKIPEDIA TRENDING (free, no API key)
+# ===========================================================================
+
+def fetch_wikipedia_trends() -> List[Dict[str, Any]]:
+    """Fetch most-read articles from Wikipedia (Wikimedia REST API, free)."""
+    import urllib.request
+    trends: List[Dict[str, Any]] = []
+
+    try:
+        # Get yesterday's most-read articles
+        from datetime import timedelta
+        yesterday = datetime.now(timezone.utc) - timedelta(days=1)
+        date_str = yesterday.strftime("%Y/%m/%d")
+        url = f"https://wikimedia.org/api/rest_v1/metrics/pageviews/top/en.wikipedia/all-access/{date_str}"
+        req = urllib.request.Request(url, headers={"User-Agent": "ENGAUGE/2.0"})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+
+        articles = []
+        for item in data.get("items", []):
+            articles.extend(item.get("articles", []))
+
+        # Filter out Wikipedia internal pages
+        skip_prefixes = ("Main_Page", "Special:", "Wikipedia:", "Portal:", "File:", "Help:", "Template:")
+        for article in articles[:40]:
+            title = article.get("article", "").replace("_", " ").strip()
+            views = article.get("views", 0)
+            if not title or title.startswith(skip_prefixes):
+                continue
+            pop = min(1.0, views / 1_000_000) if views > 0 else 0.2
+            cat = _categorise_keyword(title)
+            trends.append(_make_trend(title, cat, "wikipedia", pop))
+            if len(trends) >= 15:
+                break
+
+    except Exception as e:
+        logger.debug("Wikipedia trends fetch failed: %s", e)
+
+    logger.info("Wikipedia: fetched %d trends", len(trends))
+    return trends
+
+
+# ===========================================================================
 # HELPERS
 # ===========================================================================
 
@@ -395,6 +479,18 @@ def ingest_trends() -> Dict[str, Any]:
         all_trends.extend(fetch_news_trends())
     except Exception as e:
         logger.warning("News ingestion failed: %s", e)
+
+    # Source 4: Hacker News
+    try:
+        all_trends.extend(fetch_hackernews_trends())
+    except Exception as e:
+        logger.warning("Hacker News ingestion failed: %s", e)
+
+    # Source 5: Wikipedia trending
+    try:
+        all_trends.extend(fetch_wikipedia_trends())
+    except Exception as e:
+        logger.warning("Wikipedia ingestion failed: %s", e)
 
     # Fallback
     if not all_trends:

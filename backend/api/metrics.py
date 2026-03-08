@@ -70,10 +70,15 @@ def get_metrics():
         else:
             buckets["81-100"] += 1
 
+    # Convert to array format the frontend expects: [{range, count}, ...]
+    score_dist_array = [
+        {"range": rng, "count": cnt} for rng, cnt in buckets.items()
+    ]
+
     return {
         **raw,
         "average_score": average_score,
         "top_score": top_score,
         "engagement_average": engagement_average,
-        "score_distribution": buckets,
+        "score_distribution": score_dist_array,
     }
