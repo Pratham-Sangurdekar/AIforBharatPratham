@@ -12,8 +12,8 @@ boto3>=1.34.0
 mangum>=0.17.0
 python-dotenv>=1.0.0
 
-# --- Frame extraction (local, lightweight) ---
-opencv-python>=4.9.0
+# --- Frame extraction (headless for server deployments) ---
+opencv-python-headless>=4.9.0
 
 # --- Remote AI API SDKs (no local ML models) ---
 groq>=0.9.0
