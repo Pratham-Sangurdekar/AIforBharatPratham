@@ -1,7 +1,7 @@
 # ENGAUGE — AI-Powered Creator Dashboard
 
-> Analyse, optimise, and predict the virality of your content using **free, local AI models**.  
-> No paid APIs required. Everything runs on your machine.
+> Analyse, optimise, and predict the virality of your content using **remote AI APIs**.  
+> No heavy local models. Deploy instantly on any server.
 
 ---
 
@@ -11,14 +11,15 @@ ENGAUGE is a full-stack creator dashboard that:
 
 | Feature | How |
 |---------|-----|
-| **AI Content Analysis** | Local LLM via [Ollama](https://ollama.com) (Mistral / Llama 3 / Phi-3) |
-| **Image Understanding** | BLIP captioning + CLIP zero-shot classification |
-| **Video Analysis** | OpenCV frame extraction → BLIP/CLIP + Whisper transcription |
-| **Audio Transcription** | OpenAI Whisper (runs locally, completely free) |
+| **AI Content Analysis** | Groq Llama-3 70B (remote) or local Ollama fallback |
+| **Image Understanding** | Gemini API or Replicate LLaVA-1.6 / BLIP-2 |
+| **Video Analysis** | OpenCV frames → Replicate Vision → AssemblyAI/Groq Whisper → Groq LLM |
+| **Audio Transcription** | AssemblyAI (primary) / Groq Whisper (fallback) |
+| **Hook Detection** | First-3-second analysis (visual + speech + curiosity triggers) |
 | **Real-Time Trends** | Reddit public JSON, Google Trends (pytrends), GDELT news |
 | **Virality Scoring** | 6-factor hybrid formula (AI + trend + hook + emotion + visual + clarity) |
 | **Content DNA** | Hook type, emotion, structure, psychological triggers |
-| **Suggestions** | Actionable, trend-aware, media-aware improvement recommendations |
+| **Suggestions** | Actionable, trend-aware, media-aware improvement recommendations (max 8) |
 | **AWS Compatible** | Can switch to Bedrock/DynamoDB/S3 by toggling env vars |
 
 ---
@@ -40,7 +41,7 @@ ENGAUGE is a full-stack creator dashboard that:
 │  │  (LLM)   │  │  (Image AI)     │  │
 │  └──────────┘  └─────────────────┘  │
 │  ┌──────────┐  ┌─────────────────┐  │
-│  │ Whisper  │  │  OpenCV         │  │
+│  │ Assembly │  │  OpenCV         │  │
 │  │ (Audio)  │  │  (Video frames) │  │
 │  └──────────┘  └─────────────────┘  │
 │  ┌──────────────────────────────┐   │
@@ -138,6 +139,11 @@ TREND_REFRESH_INTERVAL=600      # Seconds between trend refreshes (default 10 mi
 ENGAUGE_ENV=local               # local | aws
 USE_LLM=false
 AWS_DEFAULT_REGION=us-east-1
+
+# --- Serverless Video Pipeline APIs ---
+REPLICATE_API_TOKEN=r8_...
+ASSEMBLYAI_API_KEY=60bb...
+GROQ_API_KEY=gsk_...
 ```
 
 ---
@@ -147,9 +153,8 @@ AWS_DEFAULT_REGION=us-east-1
 | Model | Size | Purpose | Loaded |
 |-------|------|---------|--------|
 | **Mistral 7B** (via Ollama) | ~4 GB | Content analysis, suggestions, variants | On first LLM call |
-| **BLIP** (Salesforce/blip-image-captioning-base) | ~1 GB | Image captioning | On first image analysis |
-| **CLIP** (openai/clip-vit-base-patch32) | ~600 MB | Image classification (themes, emotions, meme detection) | On first image analysis |
-| **Whisper base** | ~150 MB | Audio/video transcription | On first audio analysis |
+| **Replicate LLaVA** (Remote) | N/A | Image captioning & zero-shot vision | Replicate API |
+| **AssemblyAI** (Remote) | N/A | Audio/video transcription | Assembly API |
 
 All models are downloaded automatically on first use and cached locally.
 

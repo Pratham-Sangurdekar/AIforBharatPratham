@@ -410,7 +410,7 @@ const CustomDivider: React.FC = () => (
 
 // Main PromptInputBox Component
 interface PromptInputBoxProps {
-    onSend?: (message: string, files?: File[]) => void;
+    onSend?: (message: string, files?: File[], provider?: string) => void;
     isLoading?: boolean;
     placeholder?: string;
     className?: string;
@@ -425,6 +425,7 @@ export const PromptInputBox = React.forwardRef((props: PromptInputBoxProps, ref:
     const [showSearch, setShowSearch] = React.useState(false);
     const [showThink, setShowThink] = React.useState(false);
     const [showCanvas, setShowCanvas] = React.useState(false);
+    const [llmProvider, setLlmProvider] = React.useState("groq");
     const uploadInputRef = React.useRef<HTMLInputElement>(null);
     const promptBoxRef = React.useRef<HTMLDivElement>(null);
 
@@ -494,7 +495,7 @@ export const PromptInputBox = React.forwardRef((props: PromptInputBoxProps, ref:
                 }
             }
         }
-    }, []);
+    }, [processFile]);
 
     React.useEffect(() => {
         document.addEventListener("paste", handlePaste);
@@ -503,7 +504,7 @@ export const PromptInputBox = React.forwardRef((props: PromptInputBoxProps, ref:
 
     const handleSubmit = () => {
         if (input.trim() || files.length > 0) {
-            onSend(input, files);
+            onSend(input, files, llmProvider);
             setInput("");
             setFiles([]);
             setFilePreviews({});
@@ -515,7 +516,7 @@ export const PromptInputBox = React.forwardRef((props: PromptInputBoxProps, ref:
     const handleStopRecording = (duration: number) => {
         console.log(`Stopped recording after ${duration} seconds`);
         setIsRecording(false);
-        onSend(`[Voice message - ${duration} seconds]`, []);
+        onSend(`[Voice message - ${duration} seconds]`, [], llmProvider);
     };
 
     const hasContent = input.trim() !== "" || files.length > 0;
@@ -742,46 +743,63 @@ export const PromptInputBox = React.forwardRef((props: PromptInputBoxProps, ref:
                         </div>
                     </div>
 
-                    <PromptInputAction
-                        tooltip={
-                            isLoading
-                                ? "Stop generation"
-                                : isRecording
-                                    ? "Stop recording"
-                                    : hasContent
-                                        ? "Send message"
-                                        : "Voice message"
-                        }
-                    >
-                        <Button
-                            variant="default"
-                            size="icon"
-                            className={cn(
-                                "h-8 w-8 rounded-full transition-all duration-200",
-                                isRecording
-                                    ? "bg-transparent hover:bg-gray-600/30 text-red-500 hover:text-red-400"
-                                    : hasContent
-                                        ? "bg-white hover:bg-white/80 text-[#1F2023]"
-                                        : "bg-transparent hover:bg-gray-600/30 text-[#9CA3AF] hover:text-[#D1D5DB]"
-                            )}
-                            onClick={() => {
-                                if (isRecording) setIsRecording(false);
-                                else if (hasContent) handleSubmit();
-                                else setIsRecording(true);
-                            }}
-                            disabled={isLoading && !hasContent}
+                    <div className="flex items-center gap-2">
+                        {/* Model Toggle Dropdown */}
+                        <div className="relative group/model shrink-0 bg-[#2A2B2F] rounded-full border border-[#444444] text-[#9CA3AF] hover:text-[#D1D5DB] transition-all">
+                            <select
+                                value={llmProvider}
+                                onChange={(e) => setLlmProvider(e.target.value)}
+                                className="appearance-none bg-transparent py-1.5 pl-3 pr-8 text-xs font-medium cursor-pointer outline-none w-full h-full rounded-full"
+                            >
+                                <option value="groq">Groq</option>
+                                <option value="bedrock">AWS Bedrock</option>
+                            </select>
+                            <div className="absolute inset-y-0 right-2 flex items-center pointer-events-none">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-down"><path d="m6 9 6 6 6-6" /></svg>
+                            </div>
+                        </div>
+
+                        <PromptInputAction
+                            tooltip={
+                                isLoading
+                                    ? "Stop generation"
+                                    : isRecording
+                                        ? "Stop recording"
+                                        : hasContent
+                                            ? "Send message"
+                                            : "Voice message"
+                            }
                         >
-                            {isLoading ? (
-                                <Square className="h-4 w-4 fill-[#1F2023] animate-pulse" />
-                            ) : isRecording ? (
-                                <StopCircle className="h-5 w-5 text-red-500" />
-                            ) : hasContent ? (
-                                <ArrowUp className="h-4 w-4 text-[#1F2023]" />
-                            ) : (
-                                <Mic className="h-5 w-5 text-[#1F2023] transition-colors" />
-                            )}
-                        </Button>
-                    </PromptInputAction>
+                            <Button
+                                variant="default"
+                                size="icon"
+                                className={cn(
+                                    "h-8 w-8 rounded-full transition-all duration-200",
+                                    isRecording
+                                        ? "bg-transparent hover:bg-gray-600/30 text-red-500 hover:text-red-400"
+                                        : hasContent
+                                            ? "bg-white hover:bg-white/80 text-[#1F2023]"
+                                            : "bg-transparent hover:bg-gray-600/30 text-[#9CA3AF] hover:text-[#D1D5DB]"
+                                )}
+                                onClick={() => {
+                                    if (isRecording) setIsRecording(false);
+                                    else if (hasContent) handleSubmit();
+                                    else setIsRecording(true);
+                                }}
+                                disabled={isLoading && !hasContent}
+                            >
+                                {isLoading ? (
+                                    <Square className="h-4 w-4 fill-[#1F2023] animate-pulse" />
+                                ) : isRecording ? (
+                                    <StopCircle className="h-5 w-5 text-red-500" />
+                                ) : hasContent ? (
+                                    <ArrowUp className="h-4 w-4 text-[#1F2023]" />
+                                ) : (
+                                    <Mic className="h-5 w-5 text-[#1F2023] transition-colors" />
+                                )}
+                            </Button>
+                        </PromptInputAction>
+                    </div>
                 </PromptInputActions>
             </PromptInput>
 

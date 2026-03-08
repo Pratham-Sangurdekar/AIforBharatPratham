@@ -49,6 +49,30 @@ function getTypeBg(type: string) {
   }
 }
 
+function MediaThumbnail({ item, className = "" }: { item: any, className?: string }) {
+  if (item.media_url) {
+    if (item.content_type === "image") {
+      return (
+        <div className={`relative w-full overflow-hidden bg-black/20 ${className}`}>
+          <img src={item.media_url} alt="Media thumbnail" className="object-cover w-full h-full" />
+        </div>
+      );
+    } else if (item.content_type === "video") {
+      return (
+        <div className={`relative w-full overflow-hidden bg-black/20 ${className}`}>
+          <video src={item.media_url} className="object-cover w-full h-full pointer-events-none" muted playsInline loop autoPlay />
+        </div>
+      );
+    }
+  }
+
+  return (
+    <div className={`flex items-center justify-center w-full bg-gradient-to-br ${getTypeBg(item.content_type)} ${className}`}>
+      {getTypeIcon(item.content_type)}
+    </div>
+  );
+}
+
 function DetailView({ item, onClose }: { item: any; onClose: () => void }) {
   const [detail, setDetail] = useState<any>(null);
 
@@ -82,9 +106,23 @@ function DetailView({ item, onClose }: { item: any; onClose: () => void }) {
           <X className="h-5 w-5 text-[var(--color-text-muted)]" />
         </button>
 
-        {/* Media placeholder */}
-        <div className={`rounded-xl bg-gradient-to-br ${getTypeBg(item.content_type)} p-8 flex items-center justify-center mb-4`}>
-          {getTypeIcon(item.content_type)}
+        {/* Media View */}
+        <div className="rounded-xl overflow-hidden mb-4 relative min-h-[160px] max-h-[40vh] bg-black/30 flex flex-col items-center justify-center border border-[var(--color-border)]">
+          {item.media_url ? (
+            item.content_type === "video" ? (
+              <video src={item.media_url} controls className="max-h-[40vh] w-auto mx-auto" />
+            ) : item.content_type === "image" ? (
+              <img src={item.media_url} alt="Media" className="max-h-[40vh] w-auto mx-auto object-contain" />
+            ) : (
+              <div className={`w-full h-full min-h-[160px] bg-gradient-to-br ${getTypeBg(item.content_type)} p-8 flex items-center justify-center`}>
+                {getTypeIcon(item.content_type)}
+              </div>
+            )
+          ) : (
+            <div className={`w-full h-full min-h-[160px] bg-gradient-to-br ${getTypeBg(item.content_type)} p-8 flex items-center justify-center`}>
+              {getTypeIcon(item.content_type)}
+            </div>
+          )}
         </div>
 
         <p className="text-sm mb-2">{item.text_preview || "Media content"}</p>
@@ -219,11 +257,10 @@ export default function GalleryPage() {
           <button
             key={f.label}
             onClick={() => setFilter(f.id)}
-            className={`rounded-xl px-4 py-2 text-sm font-medium transition-all ${
-              filter === f.id
+            className={`rounded-xl px-4 py-2 text-sm font-medium transition-all ${filter === f.id
                 ? "bg-[var(--color-primary)] text-white"
                 : "bg-[var(--color-bg-card)] text-[var(--color-text-muted)] border border-[var(--color-border)] hover:text-white"
-            }`}
+              }`}
           >
             {f.label}
           </button>
@@ -242,10 +279,8 @@ export default function GalleryPage() {
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {items.map((item, i) => (
             <motion.div key={item.id} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.03 }}>
-              <GlassCard hover onClick={() => setSelected(item)} className="p-0 overflow-hidden">
-                <div className={`bg-gradient-to-br ${getTypeBg(item.content_type)} p-6 flex items-center justify-center`}>
-                  {getTypeIcon(item.content_type)}
-                </div>
+              <GlassCard hover onClick={() => setSelected(item)} className="p-0 overflow-hidden flex flex-col h-full">
+                <MediaThumbnail item={item} className="h-40 flex-shrink-0" />
                 <div className="p-3">
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-xs text-[var(--color-text-muted)] capitalize">{item.content_type}</span>

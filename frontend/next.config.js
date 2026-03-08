@@ -1,5 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "*.s3.*.amazonaws.com",
+      },
+    ],
+  },
   // In AWS mode, NEXT_PUBLIC_API_URL points to API Gateway — no proxy needed.
   // In local mode, proxy /api/* to the local FastAPI server.
   async rewrites() {

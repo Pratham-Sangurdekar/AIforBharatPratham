@@ -1,12 +1,22 @@
 """
-Viral Score Engine — Hybrid AI + heuristic virality scoring.
+Viral Score Engine — Hybrid AI + Heuristic Virality Scoring (Section 8)
+
+Enhanced 6-factor formula:
+
+    final_score =
+        0.40 × ai_score
+      + 0.20 × trend_alignment
+      + 0.15 × hook_strength
+      + 0.10 × visual_engagement
+      + 0.10 × emotional_intensity
+      + 0.05 × clarity
 
 Provides:
   - Content DNA analysis (hook, emotion, structure, psychological triggers)
-  - Heuristic-only virality score (used standalone AND as a component)
-  - Hybrid score blending: 0.50*AI + 0.20*trend + 0.15*hook + 0.15*emotion
-  - Deterministic engagement predictions (no random jitter)
-  - Score breakdown dict for frontend visualisation (Section 8)
+  - Heuristic-only virality score (standalone & component)
+  - Hybrid score blending (formula above)
+  - Score breakdown dict for frontend visualisation bars
+  - Deterministic engagement predictions
 """
 
 import hashlib
@@ -73,7 +83,7 @@ PSYCHOLOGICAL_TRIGGERS = {
 
 
 # ---------------------------------------------------------------------------
-# Hook & emotion strength maps (used in hybrid formula — Section 2)
+# Strength maps (0-1 floats used in hybrid formula)
 # ---------------------------------------------------------------------------
 
 HOOK_STRENGTH_MAP: Dict[str, float] = {
@@ -105,7 +115,7 @@ EMOTION_INTENSITY_MAP: Dict[str, float] = {
 class ViralScoreEngine:
     """Analyses content DNA and computes virality scores."""
 
-    # ---- Detection helpers (unchanged logic) ----
+    # ---- Detection helpers ----
 
     @staticmethod
     def _detect_hook(text: str) -> str:
@@ -159,7 +169,6 @@ class ViralScoreEngine:
     def analyze_content_dna(
         text: Optional[str], content_type: str
     ) -> Dict[str, Any]:
-        """Return content DNA dict: hook, emotion, structure, triggers."""
         if not text or not text.strip():
             return {
                 "hook": "visual hook",
@@ -174,7 +183,7 @@ class ViralScoreEngine:
             "psychological_triggers": ViralScoreEngine._detect_psychological_triggers(text),
         }
 
-    # ---- Heuristic-only score (legacy, still used as fallback) ----
+    # ---- Heuristic-only score (legacy / fallback) ----
 
     @staticmethod
     def calculate_virality_score(
@@ -183,7 +192,6 @@ class ViralScoreEngine:
         content_dna: Dict[str, Any],
         trend_relevance: float = 0.0,
     ) -> float:
-        """Compute a virality score 0-100 from heuristic rules only."""
         score = 30.0
 
         hook = content_dna.get("hook", "direct statement")
@@ -222,7 +230,6 @@ class ViralScoreEngine:
             elif 50 <= length < 100 or 500 < length <= 1000:
                 score += 2
 
-        # Deterministic jitter from content hash
         if text:
             h = int(hashlib.md5(text.encode()).hexdigest()[:8], 16)
             jitter = (h % 7) - 3
@@ -230,65 +237,70 @@ class ViralScoreEngine:
 
         return max(0.0, min(100.0, round(score, 1)))
 
-    # ---- Hybrid score (Section 2 / enhanced Section 8) ----
+    # ---- Hybrid score — Section 8 exact formula ----
 
     @staticmethod
     def calculate_hybrid_score(
         ai_score: float,
-        trend_relevance: float,
+        trend_alignment: float,
         content_dna: Dict[str, Any],
         media_context: Optional[Dict[str, Any]] = None,
     ) -> float:
         """
-        Blend AI score with heuristic sub-signals.
+        6-factor hybrid formula:
 
-        Enhanced 6-factor formula:
-          0.40 * ai_score
-        + 0.20 * (trend_relevance * 100)
-        + 0.15 * (hook_strength * 100)
-        + 0.10 * (emotion_intensity * 100)
-        + 0.10 * (visual_engagement * 100)
-        + 0.05 * (clarity * 100)
+            final_score =
+                0.40 × ai_score
+              + 0.20 × (trend_alignment × 100)
+              + 0.15 × (hook_strength × 100)
+              + 0.10 × (visual_engagement × 100)
+              + 0.10 × (emotional_intensity × 100)
+              + 0.05 × (clarity × 100)
 
-        Returns a float 0-100.
+        All sub-signals are normalised to 0-1 internally; the final
+        result is 0-100.
         """
         hook = content_dna.get("hook", "direct statement")
         emotion = content_dna.get("emotion", "neutral")
 
+        # Pull from content_dna (LLM may have set these) or use lookup tables
         hook_strength = content_dna.get("hook_strength") or HOOK_STRENGTH_MAP.get(hook, 0.30)
-        emotion_intensity = content_dna.get("emotional_intensity") or EMOTION_INTENSITY_MAP.get(emotion, 0.20)
+        emotional_intensity = content_dna.get("emotional_intensity") or EMOTION_INTENSITY_MAP.get(emotion, 0.20)
         clarity = content_dna.get("clarity_score", 0.5)
 
-        # Visual engagement from media analysis
-        visual_engagement = 0.3  # default for text-only
+        # Visual engagement from media context
+        visual_engagement = 0.30  # default (text-only)
         if media_context:
-            ve = 0.4
-            if media_context.get("caption"):
+            ve = 0.40
+            if media_context.get("visual_engagement"):
+                raw_ve = float(media_context["visual_engagement"])
+                ve = raw_ve / 100.0 if raw_ve > 1.0 else raw_ve
+            elif media_context.get("caption"):
                 ve += 0.15
-            if media_context.get("visual_theme"):
-                ve += 0.1
             if media_context.get("hook_strength"):
-                ve = max(ve, media_context["hook_strength"])
-            if media_context.get("meme_probability", 0) > 0.5:
-                ve += 0.15  # memes tend to have high visual engagement
+                # hook_strength from video pipeline is 0-100, normalise
+                hs = float(media_context["hook_strength"])
+                if hs > 1.0:
+                    hs = hs / 100.0
+                ve = max(ve, hs)
             visual_engagement = min(1.0, ve)
 
         blended = (
             0.40 * ai_score
-            + 0.20 * (trend_relevance * 100)
+            + 0.20 * (trend_alignment * 100)
             + 0.15 * (hook_strength * 100)
-            + 0.10 * (emotion_intensity * 100)
             + 0.10 * (visual_engagement * 100)
+            + 0.10 * (emotional_intensity * 100)
             + 0.05 * (clarity * 100)
         )
         return max(0.0, min(100.0, round(blended, 1)))
 
-    # ---- Score breakdown for frontend bars (Section 8 enhanced) ----
+    # ---- Score breakdown for frontend bars ----
 
     @staticmethod
     def get_score_breakdown(
         ai_score: float,
-        trend_relevance: float,
+        trend_alignment: float,
         content_dna: Dict[str, Any],
         media_context: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, float]:
@@ -298,19 +310,25 @@ class ViralScoreEngine:
 
         hook_strength = (content_dna.get("hook_strength") or HOOK_STRENGTH_MAP.get(hook, 0.30)) * 100
         emotion_intensity = (content_dna.get("emotional_intensity") or EMOTION_INTENSITY_MAP.get(emotion, 0.20)) * 100
-        trend_score = trend_relevance * 100
+        trend_score = trend_alignment * 100
         clarity = content_dna.get("clarity_score", 0.5) * 100
 
         visual_engagement = 30.0
         if media_context:
-            ve = 40.0
-            if media_context.get("caption"):
-                ve += 15
-            if media_context.get("visual_theme"):
-                ve += 10
-            if media_context.get("hook_strength"):
-                ve = max(ve, media_context["hook_strength"] * 100)
-            visual_engagement = min(100.0, ve)
+            if media_context.get("visual_engagement"):
+                raw_ve = float(media_context["visual_engagement"])
+                visual_engagement = raw_ve if raw_ve > 1.0 else raw_ve * 100
+            else:
+                ve = 40.0
+                if media_context.get("caption"):
+                    ve += 15
+                if media_context.get("hook_strength"):
+                    hs = float(media_context["hook_strength"])
+                    if hs > 1.0:
+                        ve = max(ve, hs)
+                    else:
+                        ve = max(ve, hs * 100)
+                visual_engagement = min(100.0, ve)
 
         return {
             "ai_score": round(ai_score, 1),
@@ -325,12 +343,7 @@ class ViralScoreEngine:
 
     @staticmethod
     def predict_engagement(virality_score: float) -> Dict[str, int]:
-        """
-        Estimate engagement metrics from virality score.
-        Deterministic — same score always yields the same prediction.
-        """
         base_reach = virality_score * 50
-        # Use deterministic multipliers instead of random
         return {
             "likes": int(base_reach * 0.25),
             "shares": int(base_reach * 0.065),

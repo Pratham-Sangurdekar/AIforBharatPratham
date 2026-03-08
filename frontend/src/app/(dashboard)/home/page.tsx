@@ -63,14 +63,18 @@ const BAR_LABELS: Record<string, string> = {
   ai_score: "AI Score",
   trend_score: "Trend Alignment",
   hook_strength: "Hook Strength",
+  visual_engagement: "Visual Engagement",
   emotion_intensity: "Emotion Intensity",
+  clarity: "Clarity",
 };
 
 const BAR_COLORS: Record<string, string> = {
   ai_score: "bg-violet-500",
   trend_score: "bg-blue-500",
   hook_strength: "bg-amber-500",
+  visual_engagement: "bg-cyan-500",
   emotion_intensity: "bg-rose-500",
+  clarity: "bg-emerald-500",
 };
 
 function BreakdownBars({ breakdown }: BreakdownProps) {
@@ -437,7 +441,7 @@ export default function HomePage() {
   }, [toast]);
 
   const handleSend = useCallback(
-    async (message: string, files?: File[]) => {
+    async (message: string, files?: File[], provider?: string) => {
       if (!message.trim() && (!files || files.length === 0)) return;
       setIsAnalyzing(true);
       setError(null);
@@ -448,6 +452,7 @@ export default function HomePage() {
       if (message.trim()) formData.append("text", message.trim());
       if (files && files.length > 0) formData.append("file", files[0]);
       formData.append("platform", "general");
+      if (provider) formData.append("llm_provider", provider);
 
       try {
         const data = await analyzeContent(formData);

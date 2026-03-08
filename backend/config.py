@@ -29,7 +29,7 @@ DYNAMODB_TRENDS_TABLE = os.getenv("DYNAMODB_TRENDS_TABLE", "engauge_trending_top
 DYNAMODB_USERS_TABLE = os.getenv("DYNAMODB_USERS_TABLE", "engauge_users")
 
 # Bedrock
-BEDROCK_MODEL_ID = os.getenv("BEDROCK_MODEL_ID", "anthropic.claude-3-haiku-20240307-v1:0")
+BEDROCK_MODEL_ID = os.getenv("BEDROCK_MODEL_ID", "meta.llama3-8b-instruct-v1:0")
 BEDROCK_MAX_TOKENS = int(os.getenv("BEDROCK_MAX_TOKENS", "2048"))
 BEDROCK_TIMEOUT = int(os.getenv("BEDROCK_TIMEOUT", "15"))  # seconds
 
@@ -58,6 +58,10 @@ LOCAL_LLM_MODEL = os.getenv("LOCAL_LLM_MODEL", "mistral")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+
+# ---------- Serverless Video Pipeline APIs (Section 13) ----------
+REPLICATE_API_TOKEN = os.getenv("REPLICATE_API_TOKEN", "")
+ASSEMBLYAI_API_KEY = os.getenv("ASSEMBLYAI_API_KEY", "")
 
 
 def is_aws() -> bool:

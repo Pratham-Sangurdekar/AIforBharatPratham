@@ -40,12 +40,12 @@ def _get_bedrock_client():
 # Content hash for caching (Section 5)
 # ---------------------------------------------------------------------------
 
-def compute_content_hash(text: Optional[str], platform: str) -> str:
+def compute_content_hash(text: Optional[str], platform: str, llm_provider: str = "groq") -> str:
     """
-    Produce a deterministic hash of (content + platform).
-    Used as a cache key to avoid repeated Bedrock invocations.
+    Produce a deterministic hash of (content + platform + provider).
+    Used as a cache key to avoid repeated LLM invocations.
     """
-    payload = f"{(text or '').strip().lower()}||{platform.strip().lower()}"
+    payload = f"{(text or '').strip().lower()}||{platform.strip().lower()}||{llm_provider.strip().lower()}"
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
@@ -59,11 +59,22 @@ async def analyze_content_with_llm(
     trending_topics: Optional[Dict[str, Any]] = None,
     platform: str = "general",
     media_context: Optional[Dict[str, Any]] = None,
+    llm_provider: str = "groq"
 ) -> Dict[str, Any]:
     """
     Run full content analysis via LLM.
-    Priority: Groq API → Local Ollama → Bedrock → Heuristic fallback.
+    Respects explicit provider if given, else Priority: Groq API → Local Ollama → Bedrock → Heuristic fallback.
     """
+    # --- Try Bedrock Explicitly (if selected via UI) ---
+    if llm_provider == "bedrock":
+        try:
+            return await _analyze_with_bedrock(
+                text, content_type, trending_topics, platform, media_context
+            )
+        except Exception as e:
+            logger.error("Bedrock analysis failed: %s", e)
+            raise RuntimeError(f"AWS Bedrock failed: {str(e)}. Please check your AWS credentials in the .env file.")
+
     # --- Try Groq API first (free, fast, online) ---
     if os.getenv("GROQ_API_KEY", ""):
         try:
@@ -84,7 +95,7 @@ async def analyze_content_with_llm(
         except Exception as e:
             logger.warning("Local LLM unavailable, trying Bedrock: %s", e)
 
-    # --- Try Bedrock (AWS, paid) ---
+    # --- Try Bedrock (AWS, paid) (fallback) ---
     if USE_LLM and (is_aws() or _can_use_bedrock()):
         try:
             return await _analyze_with_bedrock(
@@ -270,33 +281,27 @@ async def _analyze_with_bedrock(
     platform: str,
     media_context: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    """Call Bedrock Claude 3 Haiku for full content analysis."""
+    """Call Bedrock for full content analysis using the Converse API."""
     client = _get_bedrock_client()
     user_prompt = _build_analysis_user_prompt(
         text, content_type, platform, trending_topics
     )
 
-    body = json.dumps({
-        "anthropic_version": "bedrock-2023-05-31",
-        "max_tokens": BEDROCK_MAX_TOKENS,
-        "temperature": 0.4,
-        "system": _ANALYSIS_SYSTEM_PROMPT,
-        "messages": [{"role": "user", "content": user_prompt}],
-    })
-
     try:
-        response = client.invoke_model(
+        response = client.converse(
             modelId=BEDROCK_MODEL_ID,
-            body=body,
-            contentType="application/json",
-            accept="application/json",
+            messages=[{"role": "user", "content": [{"text": user_prompt}]}],
+            system=[{"text": _ANALYSIS_SYSTEM_PROMPT}],
+            inferenceConfig={
+                "maxTokens": BEDROCK_MAX_TOKENS,
+                "temperature": 0.4,
+            }
         )
     except Exception as exc:
-        logger.error("Bedrock invoke_model error: %s", exc)
+        logger.error("Bedrock converse error: %s", exc)
         raise
 
-    response_body = json.loads(response["body"].read())
-    assistant_text = response_body["content"][0]["text"]
+    assistant_text = response["output"]["message"]["content"][0]["text"]
     result = _extract_json(assistant_text)
     return _validate_analysis_result(result)
 
@@ -307,7 +312,7 @@ async def _generate_variants_with_bedrock(
     suggestions: List[str],
     platform: str,
 ) -> List[str]:
-    """Use Bedrock to generate optimised content variants."""
+    """Use Bedrock to generate optimised content variants via Converse API."""
     client = _get_bedrock_client()
 
     user_prompt = (
@@ -318,24 +323,22 @@ async def _generate_variants_with_bedrock(
         "Return ONLY a JSON array with exactly 3 strings."
     )
 
-    body = json.dumps({
-        "anthropic_version": "bedrock-2023-05-31",
-        "max_tokens": BEDROCK_MAX_TOKENS,
-        "temperature": 0.7,
-        "system": _VARIANT_SYSTEM_PROMPT,
-        "messages": [{"role": "user", "content": user_prompt}],
-    })
-
-    response = client.invoke_model(
-        modelId=BEDROCK_MODEL_ID,
-        body=body,
-        contentType="application/json",
-        accept="application/json",
-    )
-
-    response_body = json.loads(response["body"].read())
-    assistant_text = response_body["content"][0]["text"]
-    variants = _extract_json(assistant_text)
+    try:
+        response = client.converse(
+            modelId=BEDROCK_MODEL_ID,
+            messages=[{"role": "user", "content": [{"text": user_prompt}]}],
+            system=[{"text": _VARIANT_SYSTEM_PROMPT}],
+            inferenceConfig={
+                "maxTokens": BEDROCK_MAX_TOKENS,
+                "temperature": 0.7,
+            }
+        )
+        assistant_text = response["output"]["message"]["content"][0]["text"]
+        variants = _extract_json(assistant_text)
+        if isinstance(variants, list) and len(variants) >= 1:
+            return variants[:3]
+    except Exception as exc:
+        logger.warning("Bedrock converse variant gen failed: %s", exc)
     if isinstance(variants, list) and len(variants) >= 1:
         return variants[:3]
 
