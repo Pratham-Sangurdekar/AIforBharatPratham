@@ -21,9 +21,15 @@ services:
         sync: false
       - key: ASSEMBLYAI_API_KEY
         sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_REGION
+        value: us-east-1
       - key: USE_LOCAL_LLM
         value: "false"
       - key: USE_LLM
-        value: "false"
+        value: "true"
       - key: ALLOWED_ORIGINS
         value: https://engauge.vercel.app,http://localhost:3000

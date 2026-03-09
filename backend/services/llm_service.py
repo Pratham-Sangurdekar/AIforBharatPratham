@@ -73,7 +73,13 @@ async def analyze_content_with_llm(
             )
         except Exception as e:
             logger.error("Bedrock analysis failed: %s", e)
-            raise RuntimeError(f"AWS Bedrock failed: {str(e)}. Please check your AWS credentials in the .env file.")
+            err_msg = str(e)
+            if "credentials" in err_msg.lower() or "NoCredentialProviders" in err_msg or "Unable to locate" in err_msg:
+                raise RuntimeError(
+                    "AWS Bedrock credentials not found. Set AWS_ACCESS_KEY_ID and "
+                    "AWS_SECRET_ACCESS_KEY as environment variables."
+                )
+            raise RuntimeError(f"AWS Bedrock failed: {err_msg}")
 
     # --- Try Groq API first (free, fast, online) ---
     if os.getenv("GROQ_API_KEY", ""):
