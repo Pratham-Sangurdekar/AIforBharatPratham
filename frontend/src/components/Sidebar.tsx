@@ -57,13 +57,13 @@ export default function Sidebar() {
         {/* Logo + close/collapse buttons */}
         <div className="flex h-16 items-center justify-between px-1 border-b border-[var(--color-border)] overflow-hidden">
           {collapsed ? (
-            <div className="flex w-full items-center justify-center">
-              <img
-                src="/logo-thunder.png"
-                alt="E"
-                className="h-8 w-8 object-contain"
-              />
-            </div>
+            <>
+              {/* Desktop collapsed: small icon. Mobile: full logo always */}
+              <div className="hidden md:flex w-full items-center justify-center">
+                <img src="/logo-thunder.png" alt="E" className="h-8 w-8 object-contain" />
+              </div>
+              <img src="/logo-thunder.png" alt="Engauge" className="md:hidden w-full h-auto object-contain" />
+            </>
           ) : (
             <img
               src="/logo-thunder.png"
@@ -95,7 +95,7 @@ export default function Sidebar() {
                     className={cn(
                       "flex items-center rounded-xl text-sm font-medium transition-all duration-200",
                       collapsed
-                        ? "justify-center px-0 py-2.5"
+                        ? "md:justify-center md:px-0 gap-3 px-3 py-2.5"
                         : "gap-3 px-3 py-2.5",
                       isActive
                         ? "bg-[var(--color-primary)] text-white shadow-lg glow-primary"
@@ -103,7 +103,12 @@ export default function Sidebar() {
                     )}
                   >
                     <Icon className="h-4 w-4 flex-shrink-0" />
-                    {!collapsed && <span>{item.label}</span>}
+                    {/* Always show label on mobile; hide only on desktop when collapsed */}
+                    {collapsed ? (
+                      <span className="md:hidden">{item.label}</span>
+                    ) : (
+                      <span>{item.label}</span>
+                    )}
                   </Link>
                 </li>
               );
