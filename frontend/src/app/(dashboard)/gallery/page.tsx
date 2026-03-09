@@ -251,7 +251,7 @@ export default function GalleryPage() {
   return (
     <div>
       {/* Filters */}
-      <div className="flex items-center gap-3 mb-6">
+      <div className="flex items-center gap-3 mb-6 overflow-x-auto pb-1">
         <Filter className="h-4 w-4 text-[var(--color-text-muted)]" />
         {FILTERS.map((f) => (
           <button
@@ -276,7 +276,7 @@ export default function GalleryPage() {
           <p className="text-[var(--color-text-muted)]">No items in gallery. Upload content to get started.</p>
         </GlassCard>
       ) : (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {items.map((item, i) => (
             <motion.div key={item.id} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.03 }}>
               <GlassCard hover onClick={() => setSelected(item)} className="p-0 overflow-hidden flex flex-col h-full">

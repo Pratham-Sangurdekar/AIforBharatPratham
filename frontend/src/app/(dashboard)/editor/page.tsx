@@ -289,11 +289,11 @@ export default function EditorPage() {
   const overLimit = charUsed > platformCfg.charLimit;
 
   return (
-    <div className="flex gap-6 h-[calc(100vh-7rem)]">
+    <div className="flex flex-col gap-6 lg:flex-row lg:h-[calc(100vh-7rem)]">
       {/* ---- Left: Content area ---- */}
-      <div className="flex-1 flex flex-col gap-4">
+      <div className="flex-1 flex flex-col gap-4 min-h-0">
         <GlassCard className="flex-1 flex flex-col">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-3">
             <div className="flex items-center gap-2">
               <PenTool className="h-4 w-4 text-[var(--color-accent)]" />
               <h2 className="text-sm font-semibold">Content Editor</h2>
@@ -380,7 +380,7 @@ export default function EditorPage() {
 
           {/* Platform tabs & preview */}
           <div className="mt-4">
-            <div className="flex gap-2 mb-3">
+            <div className="flex gap-2 mb-3 overflow-x-auto pb-1">
               {PLATFORMS.map((p) => {
                 const Icon = p.icon;
                 return (
@@ -416,7 +416,7 @@ export default function EditorPage() {
       </div>
 
       {/* ---- Right: AI Results Panel ---- */}
-      <div className="w-[380px] flex flex-col gap-4 overflow-y-auto">
+      <div className="w-full lg:w-[380px] flex flex-col gap-4 overflow-y-auto">
         {/* Score */}
         {analysis && (
           <motion.div

@@ -41,7 +41,7 @@ function AnimatedScore({ score }: { score: number }) {
 
   return (
     <div className="flex flex-col items-center gap-1">
-      <span className={`text-5xl font-black tabular-nums ${color}`}>
+      <span className={`text-4xl md:text-5xl font-black tabular-nums ${color}`}>
         {current}
       </span>
       <span className="text-xs text-[var(--color-text-muted)] uppercase tracking-widest">
@@ -254,13 +254,13 @@ function AnalysisResult({
           <X className="h-4 w-4 text-[var(--color-text-muted)]" />
         </button>
 
-        <div className="flex items-start gap-6">
+        <div className="flex flex-col items-center gap-4 md:flex-row md:items-start md:gap-6">
           <AnimatedScore score={result.virality_score ?? 0} />
-          <div className="flex-1">
+          <div className="flex-1 w-full">
             <p className="text-sm text-[var(--color-text)] leading-relaxed">
               {result.explanation}
             </p>
-            <div className="mt-4 flex gap-6">
+            <div className="mt-4 flex flex-wrap gap-3 md:gap-6 justify-center md:justify-start">
               {result.predicted_metrics &&
                 Object.entries(
                   result.predicted_metrics as Record<string, number>
@@ -332,7 +332,7 @@ function AnalysisResult({
             )}
 
             {result.video_analysis && (
-              <div className="grid grid-cols-2 gap-2 mt-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
                 {result.video_analysis.hook_assessment && (
                   <div className="rounded-lg bg-[var(--color-bg-card)] p-2">
                     <p className="text-xs text-[var(--color-text-muted)]">Hook</p>
@@ -479,7 +479,7 @@ export default function HomePage() {
   const hasResult = !!result;
 
   return (
-    <div className="relative flex flex-col items-center min-h-screen -m-6 -mt-8">
+    <div className="relative flex flex-col items-center min-h-screen -m-4 -mt-4 md:-m-6 md:-mt-8">
       {/* Animated background */}
       <div className="absolute inset-0 z-0 pointer-events-none">
         <EtheralShadow
@@ -535,7 +535,7 @@ export default function HomePage() {
         >
           <TextShimmer
             duration={1.5}
-            className="text-3xl font-bold tracking-tight [--base-color:#ffffff] [--base-gradient-color:#ff6d00] dark:[--base-color:#e0e0e0] dark:[--base-gradient-color:#ff9100]"
+            className="text-2xl md:text-3xl font-bold tracking-tight [--base-color:#ffffff] [--base-gradient-color:#ff6d00] dark:[--base-color:#e0e0e0] dark:[--base-gradient-color:#ff9100]"
           >
             How can I Engauge you today?
           </TextShimmer>

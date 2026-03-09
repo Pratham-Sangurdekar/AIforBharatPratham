@@ -134,7 +134,7 @@ function DetailModal({ item, onClose }: { item: any; onClose: () => void }) {
 
               {/* Predicted Metrics */}
               {detail.predicted_metrics && (
-                <div className="mb-4 flex gap-4">
+                <div className="mb-4 grid grid-cols-2 gap-3 sm:flex sm:gap-4">
                   {Object.entries(detail.predicted_metrics as Record<string, number>).map(([key, val]) => (
                     <div key={key} className="flex-1 rounded-xl bg-[var(--color-bg)] border border-[var(--color-border)] p-3 text-center">
                       <p className="text-lg font-bold text-[var(--color-accent)]">{val.toLocaleString()}</p>

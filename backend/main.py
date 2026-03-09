@@ -22,9 +22,12 @@ from api.gallery import router as gallery_router
 from api.metrics import router as metrics_router
 from config import is_local, ALLOWED_ORIGINS, LOCAL_MEDIA_DIR
 
-# Create tables on startup (local mode only)
+# Create tables on startup (local/Render — SQLite)
 if is_local():
     from database import engine, Base
+    # Import all models so Base.metadata knows about them
+    import models.content_model  # noqa: F401
+    import models.user_model     # noqa: F401
     Base.metadata.create_all(bind=engine)
 
 app = FastAPI(

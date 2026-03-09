@@ -71,12 +71,12 @@ export default function ProfilePage() {
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
         <GlassCard>
-          <div className="flex items-center gap-6">
+          <div className="flex flex-col items-center gap-4 sm:flex-row sm:gap-6">
             <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] flex items-center justify-center text-2xl font-bold text-white flex-shrink-0">
               {profile.name?.[0]?.toUpperCase() || "C"}
             </div>
             <div className="flex-1">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-center sm:justify-between w-full">
                 <div>
                   {editing ? (
                     <input
@@ -97,7 +97,7 @@ export default function ProfilePage() {
                     ) : profile.niche}
                   </p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-wrap justify-center sm:justify-start">
                   <div className="text-center">
                     <p className="text-xs text-[var(--color-text-muted)]">Avg Score</p>
                     <ScoreBadge score={profile.avg_virality_score || 0} size="sm" />
