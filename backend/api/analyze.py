@@ -60,7 +60,35 @@ async def _analyze_media(
                 }
                 return media_context
         except Exception as e:
-            logger.warning("Gemini image analysis failed, trying local: %s", e)
+            logger.warning("Gemini image analysis failed: %s", e)
+
+        # Fallback to Groq Vision (Llama 4 Scout)
+        try:
+            import os, tempfile, asyncio as _aio
+            from services.vision_api_service import _analyze_frame_groq
+            if os.getenv("GROQ_API_KEY", ""):
+                tmp = tempfile.mktemp(suffix=".jpg")
+                with open(tmp, "wb") as f:
+                    f.write(file_bytes)
+                caption = await _analyze_frame_groq(tmp)
+                try:
+                    os.unlink(tmp)
+                except OSError:
+                    pass
+                if caption:
+                    media_context = {
+                        "caption": caption,
+                        "detected_objects": [],
+                        "visual_theme": "",
+                        "emotional_tone": "",
+                        "meme_probability": 0,
+                        "visual_quality": "",
+                        "composition_notes": "",
+                        "improvement_suggestions": [],
+                    }
+                    return media_context
+        except Exception as e:
+            logger.warning("Groq Vision image fallback failed: %s", e)
 
         # Fallback to local BLIP/CLIP
         try:

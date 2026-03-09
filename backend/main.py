@@ -149,3 +149,12 @@ async def test_providers():
 
     return results
 
+
+@app.post("/api/clear-cache")
+async def clear_cache():
+    """Clear the in-memory analysis cache (useful after fixing config issues)."""
+    from services.database_service import _analysis_cache
+    count = len(_analysis_cache)
+    _analysis_cache.clear()
+    return {"cleared": count}
+
