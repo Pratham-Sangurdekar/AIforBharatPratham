@@ -36,11 +36,13 @@ app = FastAPI(
     version="0.2.0",
 )
 
-# CORS — allow frontend (configurable via env)
+# CORS — allow frontend origins
+# In production (Render), allow all origins since there's no sensitive auth.
+# For stricter control, set ALLOWED_ORIGINS env var.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
