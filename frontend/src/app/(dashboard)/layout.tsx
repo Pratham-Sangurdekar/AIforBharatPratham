@@ -16,6 +16,27 @@ function MobileMenuButton() {
   );
 }
 
+function MainContent({ children }: { children: React.ReactNode }) {
+  const { collapsed } = useSidebar();
+  return (
+    <div
+      className="flex flex-1 flex-col transition-all duration-300"
+      style={{ marginLeft: undefined }}
+    >
+      {/* Responsive margin: 0 on mobile, adapts to sidebar width on desktop */}
+      <style jsx>{`
+        @media (min-width: 768px) {
+          div { margin-left: ${collapsed ? '64px' : '220px'}; }
+        }
+      `}</style>
+      <MobileMenuButton />
+      <main className="flex-1 overflow-y-auto p-4 pt-4 md:p-6 md:pt-8">
+        {children}
+      </main>
+    </div>
+  );
+}
+
 export default function DashboardLayout({
   children,
 }: {
@@ -25,13 +46,7 @@ export default function DashboardLayout({
     <SidebarProvider>
       <div className="flex min-h-screen">
         <Sidebar />
-        <div className="flex flex-1 flex-col md:ml-[220px]">
-          {/* Floating burger – mobile only, matches notification bell style */}
-          <MobileMenuButton />
-          <main className="flex-1 overflow-y-auto p-4 pt-4 md:p-6 md:pt-8">
-            {children}
-          </main>
-        </div>
+        <MainContent>{children}</MainContent>
       </div>
     </SidebarProvider>
   );
