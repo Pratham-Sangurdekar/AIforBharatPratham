@@ -107,6 +107,10 @@ async def analyze_content_with_llm(
             )
 
     # --- Heuristic fallback ---
+    logger.warning(
+        "All LLM providers unavailable — falling back to heuristics. "
+        "Set GROQ_API_KEY env var for real AI analysis."
+    )
     return _analyze_with_heuristics(text, content_type, platform)
 
 
@@ -400,6 +404,7 @@ def _analyze_with_heuristics(
         "optimized_variants": optimized_variants,
         "trend_alignment": trend_alignment,
         "predicted_metrics": predicted_metrics,
+        "analysis_mode": "heuristic",
     }
 
 

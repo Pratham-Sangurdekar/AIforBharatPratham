@@ -426,8 +426,26 @@ export const PromptInputBox = React.forwardRef((props: PromptInputBoxProps, ref:
     const [showThink, setShowThink] = React.useState(false);
     const [showCanvas, setShowCanvas] = React.useState(false);
     const [llmProvider, setLlmProvider] = React.useState("groq");
+    const [availableProviders, setAvailableProviders] = React.useState<string[]>(["groq"]);
     const uploadInputRef = React.useRef<HTMLInputElement>(null);
     const promptBoxRef = React.useRef<HTMLDivElement>(null);
+
+    // Fetch available LLM providers from backend
+    React.useEffect(() => {
+        const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+        fetch(`${API}/api/status`)
+            .then((r) => r.json())
+            .then((data) => {
+                if (data.providers && data.providers.length > 0) {
+                    setAvailableProviders(data.providers);
+                    if (!data.providers.includes(llmProvider)) {
+                        setLlmProvider(data.providers[0]);
+                    }
+                }
+            })
+            .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const handleToggleChange = (value: string) => {
         if (value === "search") {
@@ -751,8 +769,10 @@ export const PromptInputBox = React.forwardRef((props: PromptInputBoxProps, ref:
                                 onChange={(e) => setLlmProvider(e.target.value)}
                                 className="appearance-none bg-transparent py-1.5 pl-3 pr-8 text-xs font-medium cursor-pointer outline-none w-full h-full rounded-full"
                             >
-                                <option value="groq">Groq</option>
-                                <option value="bedrock">AWS Bedrock</option>
+                                {availableProviders.map((p) => {
+                                    const labels: Record<string, string> = { groq: "Groq", bedrock: "AWS Bedrock", local: "Local" };
+                                    return <option key={p} value={p}>{labels[p] || p}</option>;
+                                })}
                             </select>
                             <div className="absolute inset-y-0 right-2 flex items-center pointer-events-none">
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-down"><path d="m6 9 6 6 6-6" /></svg>

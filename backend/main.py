@@ -66,3 +66,29 @@ app.include_router(metrics_router, prefix="/api", tags=["Metrics"])
 async def health_check():
     return {"status": "ok", "service": "engauge-api", "version": "0.2.0"}
 
+
+@app.get("/api/status")
+async def api_status():
+    """Show which AI providers are configured (no secrets exposed)."""
+    import os
+    groq_ok = bool(os.getenv("GROQ_API_KEY", ""))
+    gemini_ok = bool(os.getenv("GEMINI_API_KEY", ""))
+    assemblyai_ok = bool(os.getenv("ASSEMBLYAI_API_KEY", ""))
+    replicate_ok = bool(os.getenv("REPLICATE_API_TOKEN", ""))
+    providers = []
+    if groq_ok:
+        providers.append("groq")
+    return {
+        "providers": providers,
+        "keys_configured": {
+            "GROQ_API_KEY": groq_ok,
+            "GEMINI_API_KEY": gemini_ok,
+            "ASSEMBLYAI_API_KEY": assemblyai_ok,
+            "REPLICATE_API_TOKEN": replicate_ok,
+        },
+        "notes": [] if groq_ok else [
+            "No GROQ_API_KEY set — all text/video analysis will use heuristic fallback. "
+            "Set this env var in the Render dashboard."
+        ],
+    }
+

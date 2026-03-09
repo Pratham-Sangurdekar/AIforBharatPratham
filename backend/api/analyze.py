@@ -296,6 +296,7 @@ async def analyze_content(
             analysis_record = database_service.save_analysis(content_record["id"], analysis_result)
 
         # --- Cache the result for future identical content ---
+        analysis_mode = analysis_result.get("analysis_mode", "ai")
         response_payload = {
             "id": analysis_record["id"],
             "content_id": content_record["id"],
@@ -313,6 +314,7 @@ async def analyze_content(
             "image_analysis": analysis_result.get("image_analysis"),
             "video_analysis": analysis_result.get("video_analysis"),
             "score_breakdown": score_breakdown,
+            "analysis_mode": analysis_mode,
             "created_at": analysis_record.get("created_at", ""),
         }
 
